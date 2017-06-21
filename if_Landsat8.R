@@ -37,12 +37,19 @@ metaData <- readMeta(met_filename)
 lsat <- stackMeta(metaData)
 
 #subset and crop stack
-#Making a subset of the bands in a stack: subset(raster,2:7) in this case from the bands we are interested in
-lsat2 <- subset(lsat,2:7)
 #extent to use
 e <-extent(475000, 500000,  910000,  937500)
 #crop the composite to improve pc efficiency
-lsat3<-crop(lsat2,e)
+lsat2<-crop(lsat,e)
+
+## Correct DN to at-surface-reflecatance with simple DOS
+## Automatic haze estimation
+hazeDN <- estimateHaze(lsat2, hazeBands = 2:5, darkProp = 0.01, plot = TRUE)
+lsat3 <- radCor(lsat2, metaData = metaData, method = "sdos",hazeValues = hazeDN, hazeBands = 2:5)
+
+
+#Making a subset of the bands in a stack: subset(raster,2:7) in this case from the bands we are interested in
+lsat3 <- subset(lsat3,2:7)
 
 #function to calculate the water index. In this case, I will use: NDWI from McFeeters, S. K. (1996)
 #here you can change for whichever index you prefer...
