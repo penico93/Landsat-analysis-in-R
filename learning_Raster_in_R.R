@@ -57,13 +57,10 @@ s<-stack(f[5],f[7])
  
   plot(wat, ext = pe)
   
-  
-  wat.kmeans <- kmeans(wat[], 10, iter.max = 100, nstart = 3)
-  
+  #works very well for five bands
+  wat.kmeans <- kmeans(wat[], 5, iter.max = 100, nstart = 3)
   #create a blank raster
-  
   kmeansraster<-raster(wat)
-  
   #fill blank raster cluster column to the raster
   kmeansraster[]<-wat.kmeans$cluster
   
@@ -100,11 +97,12 @@ s<-stack(f[5],f[7])
   lsat_ref <- subset(lsat_ref,2:7)
   
   #create the index
-  e <-extent(475000, 500000,  912510,  937500)
+  e <-extent(475000, 500000,  910000,  937500)
   #but first crop s
   lsat_ref<-crop(lsat_ref,e)
   
   plotRGB(lsat_ref, r = 4, g = 5, b = 6, axes = TRUE, stretch = "lin", main = "Landsat True Color Composite")
+  plotRGB(lsat3, r = 4, g = 5, b = 6, axes = TRUE, stretch = "lin", main = "Landsat True Color Composite")
   
   #applying the water index
   wat <- watindex(lsat_ref,2,4)
@@ -123,7 +121,37 @@ s<-stack(f[5],f[7])
   # https://artax.karlin.mff.cuni.cz/r-help/library/raster/html/extract.html
   
   
+
+  #cargar el shapefile
+  
+  states=readShapePoly("E:/Sedimentology/Project FINAL/Area_ayapel_polygons/DEFINEDAREA")
+  
+  #ANOTHER FUNCTION TO READ SHAPEFILES READOGR FROM THE RGDAL PACKAGE
+  poly.1 <- readOGR(dsn="E:/Sedimentology/Project FINAL/Area_ayapel_polygons", layer = "DEFINEDAREA")
+  
+  #gives a summary of the data
+  summary(poly.1)
+  plot(wat)
+  plot(states, add=TRUE)
+  
   # se pueden poner varios puntos sobre pixeles que normalmente son agua
   #extraer el valor del kmeans y luego buscar la moda entre estos puntos
   #así se definiría qué es agua y que no...
+  ext <- extract(kmeansraster,poly.1)
+  #obtain the counts in the list ext: this would be pixel counts
+  table(ext)
+  
+  #ayapel_water_points
+  points.1 <- readOGR(dsn="E:/Sedimentology/Project FINAL/Area_ayapel_polygons", layer = "ayapel_water_points")
+  #extract the values from the points 
+  ext <- extract(kmeansraster,points.1)
+  
+  #check which is the more common value in the points
+  temp <- table(as.vector(ext))
+  mod <- names(temp)[temp==max(temp)]
+  
+  #Obtain the value by converting the string to int with the function strtoi()
+  val <- strtoi(mod)
+  
+  # with val I can now select only the pixels with this value from the kmeans raster and count this inside the polygon
   

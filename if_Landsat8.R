@@ -42,6 +42,9 @@ e <-extent(475000, 500000,  910000,  937500)
 #crop the composite to improve pc efficiency
 lsat2<-crop(lsat,e)
 
+### Convert DN to top of atmosphere reflectance and brightness temperature
+#lsat_ref <- radCor(crop(lsat,e), metaData = metaData, method = "apref")
+
 ## Correct DN to at-surface-reflecatance with simple DOS
 ## Automatic haze estimation
 hazeDN <- estimateHaze(lsat2, hazeBands = 2:5, darkProp = 0.01, plot = TRUE)
@@ -68,7 +71,7 @@ wat <- watindex(lsat3,2,4)
 #K means cluster insupervised analysis is applied to the object "wat"
 
 #5 categories are selected
-wat.kmeans <- kmeans(wat[], 5, iter.max = 100, nstart = 3)
+wat.kmeans <- kmeans(wat[], 3, iter.max = 100, nstart = 3)
 #create a blank raster
 kmeansraster<-raster(wat)
 #fill blank raster cluster column to the raster
