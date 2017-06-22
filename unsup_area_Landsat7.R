@@ -171,12 +171,44 @@ count.pixel <- table(count_within_poly)[[2]]
 
 #Obtain area by multiplying the number of pixels counted in the object
 # count.pixel by the area of a pixel which is 30*30 meters
-area.wetland <- count.pixel*30*30
+scene.area <- count.pixel*30*30
 
-plot(wat[[1]])
-plot(kmeansraster2)
-plotRGB(lsat2, r = 4, g = 5, b = 6, axes = TRUE, stretch = "lin", main = "Landsat True Color Composite")
+p1<-plot(wat[[1]])
+p2<-plot(kmeansraster2)
+p3<-plotRGB(lsat2, r = 4, g = 5, b = 6, axes = TRUE, stretch = "lin", main = "Landsat True Color Composite")
 
 
 #Cout NA's : only 1238 pixles... very small number compared to the total...
 #table(extract(kmeansraster,poly.AREA), useNA="always")[[4]]
+
+
+#obtain aqcuisition date, satellite number, area and save in dataframe...
+#save 3 images WAT, original and Kmeans ==1 in order to check them later...
+
+#obtain ACQUISITION_DATE: metaData$ACQUISITION_DATE
+scene.date <- substr(metaData$ACQUISITION_DATE, start=1, stop=10)
+scene.sat <-metaData$SATELLITE
+
+df.guardar <- data.frame(matrix(0,ncol=3,nrow=1))
+df.guardar[1] <- scene.date
+df.guardar[2] <- scene.area
+df.guardar[3] <- scene.sat
+
+colnames(df.guardar) <- c("Date","Area","Satellite")
+
+directory <- "E:/Sedimentology/Pdf_processed_image_ayapel/"
+
+pdf_name <- paste(c(directory,scene.date,"_",scene.sat,'.pdf'), collapse="")
+  pdf(file = pdf_name,width = 10, height = 10)
+  par(mfrow=c(2,2))
+  plotRGB(lsat2, r = 4, g = 5, b = 6, axes = TRUE, stretch = "lin", main = paste(c("corrected ",scene.sat," " ,scene.date), collapse =""))
+  plot(wat[[1]], main = "MNDWI index")
+  plot(kmeansraster, main = "K-means clusters")
+  plot(points.1, add = T)
+  plot(kmeansraster2, main = "K-means water cluster")
+  plot(poly.AREA, add = T)
+  text(x = 480000, y= 935000, paste(c("area: ",scene.area), collapse =""))
+  dev.off()
+  
+  
+#rowbind rbind(df1,df2)
