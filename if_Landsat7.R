@@ -6,7 +6,8 @@ library(raster)
 library(rgdal)
 library(maptools)
 library(RStoolbox)
-
+#Clear workspace
+rm(list = ls())
 
 #Code for Landsat 8 images
 #This code reads the Lansdat8 images stored in a folder, corrects this images from
@@ -70,14 +71,58 @@ watindex <- function(img, k, i){
 #apply the function and save it in wat
 wat <- watindex(lsat3,2,4)
 
+classes <- setValues(raster(wat), 1)
+
+names(classes) <- "class"
+
+wat <- addLayer(wat, classes)
 #K means cluster insupervised analysis is applied to the object "wat"
 
 #5 categories are selected I need to fix this because I have nan's
-wat.kmeans <- kmeans(wat[], 3, iter.max = 100, nstart = 3)
-#create a blank raster
-kmeansraster<-raster(wat)
-#fill blank raster cluster column to the raster
-kmeansraster[]<-wat.kmeans$cluster
+km <- kmeans(na.omit(wat[]), 3, iter.max = 100, nstart = 3)
+
+#check if there are na in the raster
+#this part of the method is taken from:https://geoscripting-wur.github.io/AdvancedRasterAnalysis/
+
+#obtain a vector with the values in wat
+dat <- getValues(wat)
+
+#check if there is any NA in the vector dat
+any(is.na(dat))
+
+#we need to have a kind of mask raster, indicating where the NA values
+#throughout the wat raster are located.
+
+#Create a blank raster of the size of wat with default values of 0
+rNA <- setValues(raster(wat), 0)
+#assign a value of 1 to the former raster of 0's where there are NA's in wat
+rNA[is.na(wat[[1]])] <- 1
+
+#now we convert rNA to a vector
+rNA <- getValues(rNA)
+
+#conver dat into a dataframe
+dat <- as.data.frame(dat)
+
+#If rNA is a 0, assign the cluster value at that position
+
+dat$class[rNA==0] <- km$cluster
+
+dat$class[rNA==1] <- NA
+
+## Create a blank raster
+classes2 <- raster(wat)
+## Assign values from the 'class' column of valuetable
+classes3 <- setValues(classes2, dat$class)
+plot(classes3, legend=FALSE, col=c("dark green", "orange", "light blue"))
+
+f = matrix(c(1,1,1,1,1,1,1,1,1), nrow=3)
+
+rm <- focal(classes3, w=f, fun=max, NAonly=TRUE)
+
+plot(rm, col=c("dark green", "orange", "light blue"))
+
+
 
 # Now we determine which of the 5 categories in the Kmeans cluster analysis
 #is the one representing water by using a shapefile of points of which we now
