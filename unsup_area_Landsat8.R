@@ -1,13 +1,10 @@
-#if_Landsat7
-
 #requried libraries
 
 library(raster)
 library(rgdal)
 library(maptools)
 library(RStoolbox)
-#Clear workspace
-rm(list = ls())
+
 
 #Code for Landsat 8 images
 #This code reads the Lansdat8 images stored in a folder, corrects this images from
@@ -17,14 +14,14 @@ rm(list = ls())
 #files are stored in E:/Sedimentology/Landsat_files
 #setwd("E:/Sedimentology/Landsat_files")
 
-filename1 <- dir("E:/Sedimentology/Landsat_files", pattern = "^LE7", full.names = TRUE, ignore.case = TRUE)
-filename2 <- dir("E:/Sedimentology/Landsat_files", pattern = "^LE07", full.names = TRUE, ignore.case = TRUE)
+filename1 <- dir("E:/Sedimentology/Landsat_files", pattern = "^LC8", full.names = TRUE, ignore.case = TRUE)
+filename2 <- dir("E:/Sedimentology/Landsat_files", pattern = "^LC08", full.names = TRUE, ignore.case = TRUE)
 
 filename <- c(filename1,filename2)
 
 # i am going to do everything for the first file in this list and then the idea is to replicate for all of the files with a loop
 
-f.name <- filename[20]
+f.name <- filename[1]
 
 #set working directory to the directory of f.name
 setwd(f.name)
@@ -50,92 +47,35 @@ lsat2<-crop(lsat,e)
 
 ## Correct DN to at-surface-reflecatance with simple DOS
 ## Automatic haze estimation
-hazeDN <- estimateHaze(lsat2, hazeBands = 1:4, darkProp = 0.01, plot = TRUE)
-lsat3 <- radCor(lsat2, metaData = metaData, method = "sdos",hazeValues = hazeDN, hazeBands = 1:4)
+hazeDN <- estimateHaze(lsat2, hazeBands = 2:5, darkProp = 0.01, plot = TRUE)
+lsat3 <- radCor(lsat2, metaData = metaData, method = "sdos",hazeValues = hazeDN, hazeBands = 2:5)
 
-#for landsat 7 only!!!
-#Making a subset of the bands in a stack: subset(raster,c(1:5,7)) in this case from the bands we are interested in
-lsat3 <- subset(lsat3,c(1:5,7))
+
+#Making a subset of the bands in a stack: subset(raster,2:7) in this case from the bands we are interested in
+lsat3 <- subset(lsat3,2:7)
 
 #function to calculate the water index. In this case, I will use: NDWI from McFeeters, S. K. (1996)
 #here you can change for whichever index you prefer...
+watindex <- function(img, k, i){
+  bi <- img[[i]] #near infrared
+  bk <- img[[k]] #green band
+  watindex <- (bk-bi)/(bk+bi)
+  return(watindex)
+}
 
-#water index used is NDWI
-#Reference:McFeeters, S. K. (1996). The use of normalized difference water index (NDWI) in the delineation of open water features. International Journal of Remote Sensing, 17 (7), 1425-1432.
-#now we are using the modified MNDWI by Xu 2006 that takes B5 of L7 instead
-# of B4
-
-watindex <- function(img){
-   bi <- img[[5]] #near infrared
-   bk <- img[[2]] #green band
-   watindex <- (bk-bi)/(bk+bi)
-   return(watindex)
-
-  }
-
-#this index below is very bad...
-# watindex <- function(img){
-#   
-#   #4  ??band2?????band5
-#   #? ???? 0:25  ??band4 ? 2:75  ??band7
-#   #? ?
-# 
-#   watindex <- (img[[2]] -img[[5]])*4 - (0.25*(img[[4]])+(img[[6]])*2.75) 
-#   return(watindex)
-# 
-# 
-# }
 #For Landsat 8 the green band is the band #3 but as we did a subset it is band #2
 #the nearinfrared is band #5 but as we did a subset it is band #4
 #apply the function and save it in wat
-wat <- watindex(lsat3)
+wat <- watindex(lsat3,2,4)
 
-classes <- setValues(raster(wat), 1)
-
-names(classes) <- "class"
-
-wat <- addLayer(wat, classes)
 #K means cluster insupervised analysis is applied to the object "wat"
 
-#5 categories are selected I need to fix this because I have nan's
-km <- kmeans(na.omit(wat[]), 3, iter.max = 100, nstart = 3)
-
-#check if there are na in the raster
-#this part of the method is taken from:https://geoscripting-wur.github.io/AdvancedRasterAnalysis/
-
-#obtain a vector with the values in wat
-dat <- getValues(wat)
-
-#check if there is any NA in the vector dat
-any(is.na(dat))
-
-#we need to have a kind of mask raster, indicating where the NA values
-#throughout the wat raster are located.
-
-#Create a blank raster of the size of wat with default values of 0
-rNA <- setValues(raster(wat), 0)
-#assign a value of 1 to the former raster of 0's where there are NA's in wat
-rNA[is.na(wat[[1]])] <- 1
-
-#now we convert rNA to a vector
-rNA <- getValues(rNA)
-
-#conver dat into a dataframe
-dat <- as.data.frame(dat)
-
-#If rNA is a 0, assign the cluster value at that position
-
-dat$class[rNA==0] <- km$cluster
-
-dat$class[rNA==1] <- NA
-
-## Create a blank raster
-classes2 <- raster(wat)
-## Assign values from the 'class' column of valuetable
-classes3 <- setValues(classes2, dat$class)
-#plot(classes3, legend=FALSE, col=c("dark green", "orange", "light blue"))
-
-kmeansraster <- classes3
+#5 categories are selected
+wat.kmeans <- kmeans(wat[], 3, iter.max = 100, nstart = 3)
+#create a blank raster
+kmeansraster<-raster(wat)
+#fill blank raster cluster column to the raster
+kmeansraster[]<-wat.kmeans$cluster
 
 # Now we determine which of the 5 categories in the Kmeans cluster analysis
 #is the one representing water by using a shapefile of points of which we now
@@ -173,6 +113,4 @@ count.pixel <- table(count_within_poly)[[2]]
 # count.pixel by the area of a pixel which is 30*30 meters
 area.wetland <- count.pixel*30*30
 
-plot(wat[[1]])
-plot(kmeansraster2)
-plotRGB(lsat2, r = 4, g = 5, b = 6, axes = TRUE, stretch = "lin", main = "Landsat True Color Composite")
+

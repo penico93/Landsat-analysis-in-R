@@ -24,7 +24,7 @@ filename <- c(filename1,filename2)
 
 # i am going to do everything for the first file in this list and then the idea is to replicate for all of the files with a loop
 
-f.name <- filename[20]
+f.name <- filename[40]
 
 #set working directory to the directory of f.name
 setwd(f.name)
@@ -66,7 +66,7 @@ lsat3 <- subset(lsat3,c(1:5,7))
 # of B4
 
 watindex <- function(img){
-   bi <- img[[5]] #near infrared
+   bi <- img[[5]] #near infrared, in Xu 2006 middle infrared
    bk <- img[[2]] #green band
    watindex <- (bk-bi)/(bk+bi)
    return(watindex)
@@ -176,3 +176,7 @@ area.wetland <- count.pixel*30*30
 plot(wat[[1]])
 plot(kmeansraster2)
 plotRGB(lsat2, r = 4, g = 5, b = 6, axes = TRUE, stretch = "lin", main = "Landsat True Color Composite")
+
+
+#Cout NA's : only 1238 pixles... very small number compared to the total...
+#table(extract(kmeansraster,poly.AREA), useNA="always")[[4]]
