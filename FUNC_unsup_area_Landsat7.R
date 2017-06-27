@@ -175,12 +175,7 @@ calc.AREA <- function(file_name){
   #Obtain area by multiplying the number of pixels counted in the object
   # count.pixel by the area of a pixel which is 30*30 meters
   scene.area <- count.pixel*30*30
-  
-  p1<-plot(wat[[1]])
-  p2<-plot(kmeansraster2)
-  p3<-plotRGB(lsat2, r = 4, g = 5, b = 6, axes = TRUE, stretch = "lin", main = "Landsat True Color Composite")
-  
-  
+
   #Cout NA's : only 1238 pixles... very small number compared to the total...
   #table(extract(kmeansraster,poly.AREA), useNA="always")[[4]]
   
@@ -226,7 +221,7 @@ calc.AREA <- function(file_name){
 df.1 <- data.frame(matrix(0,ncol=3,nrow=0))
 colnames(df.1) <- c("Date","Area","Satellite")
 
-for(i in 1:length(filename)){
+for(i in 45:length(filename)){
 #for(i in 1:10){
   f.name <- filename[i]
   newrow <- calc.AREA(f.name)
@@ -236,4 +231,3 @@ for(i in 1:length(filename)){
 
 #Write 
 write.table(df.1, file=paste(c("E:/Sedimentology/Landsat_files/","table_landsat7.txt"),collapse=""))
-
