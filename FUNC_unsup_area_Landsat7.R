@@ -221,7 +221,7 @@ calc.AREA <- function(file_name){
 df.1 <- data.frame(matrix(0,ncol=3,nrow=0))
 colnames(df.1) <- c("Date","Area","Satellite")
 
-for(i in 45:length(filename)){
+for(i in 1:length(filename)){
 #for(i in 1:10){
   f.name <- filename[i]
   newrow <- calc.AREA(f.name)
