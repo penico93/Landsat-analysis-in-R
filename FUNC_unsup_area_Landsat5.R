@@ -74,14 +74,52 @@ calc.AREA <- function(file_name){
   #apply the function and save it in wat
   wat <- watindex(lsat3)
   
+  classes <- setValues(raster(wat), 1)
+  
+  names(classes) <- "class"
+  
+  wat <- addLayer(wat, classes)
   #K means cluster insupervised analysis is applied to the object "wat"
   
-  #5 categories are selected
-  wat.kmeans <- kmeans(wat[], 3, iter.max = 100, nstart = 3)
-  #create a blank raster
-  kmeansraster<-raster(wat)
-  #fill blank raster cluster column to the raster
-  kmeansraster[]<-wat.kmeans$cluster
+  #5 categories are selected I need to fix this because I have nan's
+  km <- kmeans(na.omit(wat[]), 3, iter.max = 100, nstart = 3)
+  
+  #check if there are na in the raster
+  #this part of the method is taken from:https://geoscripting-wur.github.io/AdvancedRasterAnalysis/
+  
+  #obtain a vector with the values in wat
+  dat <- getValues(wat)
+  
+  #check if there is any NA in the vector dat
+  any(is.na(dat))
+  
+  #we need to have a kind of mask raster, indicating where the NA values
+  #throughout the wat raster are located.
+  
+  #Create a blank raster of the size of wat with default values of 0
+  rNA <- setValues(raster(wat), 0)
+  #assign a value of 1 to the former raster of 0's where there are NA's in wat
+  rNA[is.na(wat[[1]])] <- 1
+  
+  #now we convert rNA to a vector
+  rNA <- getValues(rNA)
+  
+  #conver dat into a dataframe
+  dat <- as.data.frame(dat)
+  
+  #If rNA is a 0, assign the cluster value at that position
+  
+  dat$class[rNA==0] <- km$cluster
+  
+  dat$class[rNA==1] <- NA
+  
+  ## Create a blank raster
+  classes2 <- raster(wat)
+  ## Assign values from the 'class' column of valuetable
+  classes3 <- setValues(classes2, dat$class)
+  #plot(classes3, legend=FALSE, col=c("dark green", "orange", "light blue"))
+  
+  kmeansraster <- classes3
   
   # Now we determine which of the 5 categories in the Kmeans cluster analysis
   #is the one representing water by using a shapefile of points of which we now
@@ -117,9 +155,7 @@ calc.AREA <- function(file_name){
   
   #Obtain area by multiplying the number of pixels counted in the object
   # count.pixel by the area of a pixel which is 30*30 meters
-  
   scene.area <- count.pixel*30*30
-  
   
   #Cout NA's : only 1238 pixles... very small number compared to the total...
   #table(extract(kmeansraster,poly.AREA), useNA="always")[[4]]
@@ -144,8 +180,8 @@ calc.AREA <- function(file_name){
   pdf_name <- paste(c(directory,scene.date,"_",scene.sat,'.pdf'), collapse="")
   pdf(file = pdf_name,width = 10, height = 10)
   par(mfrow=c(2,2))
-  plotRGB(lsat3, r = 4, g = 5, b = 6, axes = TRUE, stretch = "lin", main = paste(c("corrected ",scene.sat," " ,scene.date), collapse =""))
-  plot(wat, main = "MNDWI index")
+  plotRGB(lsat2, r = 4, g = 5, b = 6, axes = TRUE, stretch = "lin", main = paste(c("corrected ",scene.sat," " ,scene.date), collapse =""))
+  plot(wat[[1]], main = "MNDWI index")
   plot(kmeansraster, main = "K-means clusters")
   plot(points.1, add = T)
   plot(kmeansraster2, main = "K-means water cluster")
@@ -154,11 +190,11 @@ calc.AREA <- function(file_name){
   dev.off()
   
   
-  
   return(df.guardar)
   
   #Clear workspace
   rm(list = ls())
+  
   
 }
 
@@ -170,8 +206,8 @@ calc.AREA <- function(file_name){
 df.1 <- data.frame(matrix(0,ncol=3,nrow=0))
 colnames(df.1) <- c("Date","Area","Satellite")
 
-#for(i in 1:length(filename)){
-for(i in 1:3){
+for(i in 1:length(filename)){
+#for(i in 1:3){
   f.name <- filename[i]
   newrow <- calc.AREA(f.name)
   df.1 <- rbind(df.1,newrow)
